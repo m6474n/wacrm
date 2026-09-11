@@ -45,6 +45,8 @@ function NewAutomationPageInner() {
         trigger_config: t.trigger_config as Record<string, unknown>,
         is_active: false,
         steps,
+        template_slug: template,
+        template_name: t.name,
       }
     }
     return {

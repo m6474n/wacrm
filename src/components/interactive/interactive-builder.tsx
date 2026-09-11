@@ -88,7 +88,7 @@ export function InteractiveBuilder({
   };
 
   return (
-    <div className="flex flex-col gap-4 md:flex-row">
+    <div className="flex flex-col gap-4 lg:flex-row">
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         {/* Kind toggle */}
         <div className="flex gap-2">
@@ -114,7 +114,7 @@ export function InteractiveBuilder({
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Field
             label="Header (optional)"
             counter={`${(value.header ?? "").length}/${INTERACTIVE_LIMITS.headerTextMaxLength}`}
@@ -161,7 +161,7 @@ export function InteractiveBuilder({
       </div>
 
       {showPreview && (
-        <div className="flex shrink-0 flex-col gap-1.5 md:w-[280px]">
+        <div className="flex shrink-0 flex-col gap-1.5 w-full lg:w-[280px]">
           <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Preview
           </span>
@@ -220,7 +220,7 @@ function ButtonsEditor({
                 value={b.id}
                 onChange={(e) => update(i, { id: slugify(e.target.value, `btn_${i + 1}`) })}
                 placeholder="id"
-                className="w-28 bg-muted font-mono text-xs"
+                className="w-24 sm:w-28 shrink-0 bg-muted font-mono text-xs"
               />
             )}
             <Input
@@ -228,7 +228,7 @@ function ButtonsEditor({
               maxLength={INTERACTIVE_LIMITS.buttonTitleMaxLength}
               onChange={(e) => update(i, { title: e.target.value })}
               placeholder="Button label"
-              className="flex-1 bg-muted"
+              className="min-w-0 flex-1 bg-muted"
             />
             <span className="w-10 shrink-0 text-right text-[10px] text-muted-foreground">
               {b.title.length}/{INTERACTIVE_LIMITS.buttonTitleMaxLength}
@@ -238,7 +238,7 @@ function ButtonsEditor({
                 variant="ghost"
                 size="sm"
                 onClick={() => remove(i)}
-                className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -364,7 +364,7 @@ function ListEditor({
                         updateRow(sIdx, rIdx, { id: slugify(e.target.value, `row_${rIdx + 1}`) })
                       }
                       placeholder="id"
-                      className="w-24 bg-muted font-mono text-xs"
+                      className="w-20 sm:w-24 shrink-0 bg-muted font-mono text-xs"
                     />
                   )}
                   <Input
@@ -372,7 +372,7 @@ function ListEditor({
                     maxLength={INTERACTIVE_LIMITS.listRowTitleMaxLength}
                     onChange={(e) => updateRow(sIdx, rIdx, { title: e.target.value })}
                     placeholder="Row title"
-                    className="flex-1 bg-muted"
+                    className="min-w-0 flex-1 bg-muted"
                   />
                   <span className="w-10 shrink-0 text-right text-[10px] text-muted-foreground">
                     {row.title.length}/{INTERACTIVE_LIMITS.listRowTitleMaxLength}
@@ -382,7 +382,7 @@ function ListEditor({
                       variant="ghost"
                       size="sm"
                       onClick={() => removeRow(sIdx, rIdx)}
-                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                      className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

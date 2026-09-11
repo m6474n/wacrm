@@ -113,6 +113,10 @@ export interface Contact {
   /** Hydrated by queries that embed `contact_tags(tags(*))` (e.g. the
    *  Inbox conversation list, for tag filtering). Absent otherwise. */
   tags?: Tag[];
+  ig_username?: string;
+  ig_id?: string;
+  fb_psid?: string;
+  preferred_channel?: OmnichannelPlatform;
 }
 
 export interface Tag {
@@ -169,6 +173,9 @@ export interface Conversation {
   created_at: string;
   updated_at: string;
   contact?: Contact;
+  channel?: OmnichannelPlatform;
+  channel_id?: string;
+  external_user_id?: string;
   /**
    * AI auto-reply state for this thread (migration 029 + 033):
    *  - `ai_autoreply_disabled` — the bot is paused here (a human took
@@ -176,7 +183,7 @@ export interface Conversation {
    *  - `ai_reply_count` — how many times the bot has auto-replied,
    *    checked against the account's per-conversation cap.
    *  - `ai_handoff_summary` — short internal note the bot wrote when it
-   *    handed off, shown to whoever takes the thread over.
+   *    handed off, handed to whoever takes the thread over.
    */
   ai_autoreply_disabled?: boolean;
   ai_reply_count?: number;
@@ -228,6 +235,9 @@ export interface Message {
   media_url?: string;
   template_name?: string;
   message_id?: string;
+  meta_message_id?: string;
+  channel?: OmnichannelPlatform;
+  direction?: 'inbound' | 'outbound';
   status: MessageStatus;
   created_at: string;
   reply_to_message_id?: string;
@@ -654,3 +664,94 @@ export interface QuickReply {
   created_at: string;
   updated_at: string;
 }
+
+// ============================================================
+// Omnichannel: Instagram & Facebook (migration 040)
+// ============================================================
+
+export type OmnichannelPlatform = 'whatsapp' | 'instagram' | 'facebook';
+
+export type ChannelStatus = 'connected' | 'disconnected' | 'token_expired';
+
+export interface IcebreakerQuestion {
+  question: string;
+  payload: string;
+}
+
+export interface ChannelSettings {
+  icebreakers?: IcebreakerQuestion[];
+  auto_like_comments?: boolean;
+  enable_story_mentions?: boolean;
+  enable_story_replies?: boolean;
+  story_mention_reply_text?: string;
+  follower_count?: number;
+  category?: string;
+  connected_by?: string;
+}
+
+export interface Channel {
+  id: string;
+  account_id: string;
+  platform: OmnichannelPlatform;
+  external_id: string;
+  name: string;
+  username?: string | null;
+  avatar_url?: string | null;
+  access_token?: string;
+  status: ChannelStatus;
+  settings: ChannelSettings;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PostAutomationTargetType =
+  | 'specific_post'
+  | 'all_posts'
+  | 'next_post'
+  | 'reels_only'
+  | 'live';
+
+export type PostAutomationMatch = 'all' | 'exact' | 'contains' | 'word';
+
+export interface PostAutomationStats {
+  comments: number;
+  dms_sent: number;
+  button_clicks: number;
+  leads_captured: number;
+}
+
+export interface PostAutomationDMButton {
+  title: string;
+  url?: string;
+  flow_node_key?: string;
+}
+
+export interface PostAutomationDMPayload {
+  text: string;
+  buttons?: PostAutomationDMButton[];
+  media_url?: string;
+}
+
+export interface PostAutomation {
+  id: string;
+  account_id: string;
+  channel_id: string | null;
+  platform: 'instagram' | 'facebook';
+  name: string;
+  target_type: PostAutomationTargetType;
+  target_post_id?: string | null;
+  target_post_url?: string | null;
+  target_post_thumbnail?: string | null;
+  keyword_match_type: PostAutomationMatch;
+  keywords: string[];
+  public_replies: string[];
+  auto_like_comment: boolean;
+  flow_id?: string | null;
+  dm_message_payload: PostAutomationDMPayload;
+  stats: PostAutomationStats;
+  status: 'active' | 'paused';
+  created_at: string;
+  updated_at: string;
+  channel?: Channel;
+}
+

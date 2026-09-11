@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MessageSquare, CheckCircle, UsersRound } from "lucide-react";
+import { AppLogo } from "@/components/brand/app-logo";
 
 // `useSearchParams` opts the component out of static prerendering
 // unless wrapped in Suspense — same pattern as /login.
@@ -129,22 +130,21 @@ function SignupPageInner() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md border-border bg-card">
+      <Card className="w-full max-w-md border border-border bg-card shadow-sm">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            {inviteToken ? (
-              <UsersRound className="h-6 w-6 text-primary" />
-            ) : (
-              <MessageSquare className="h-6 w-6 text-primary" />
-            )}
+          <div className="mb-2">
+            <AppLogo size="xl" priority />
           </div>
-          <CardTitle className="text-xl text-foreground">
+          <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+            Deversol Revenue Operations
+          </div>
+          <CardTitle className="font-heading text-2xl font-bold tracking-tight text-foreground">
             {inviteToken ? "Create account & join" : "Create account"}
           </CardTitle>
           <CardDescription className="text-muted-foreground">
             {inviteToken
               ? "Verify your email, then accept the invitation to join your team."
-              : "Get started with CRM Template for WhatsApp"}
+              : "Get started with Deversol Revenue Systems & CRM"}
           </CardDescription>
         </CardHeader>
         <CardContent>

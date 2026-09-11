@@ -30,6 +30,10 @@ import {
   type MediaKind,
 } from '@/lib/whatsapp/meta-api';
 import {
+  sendInstagramDM,
+  sendFacebookMessage,
+} from '@/lib/meta/graph-api';
+import {
   validateInteractivePayload,
   interactivePayloadPreviewText,
   type InteractiveMessagePayload,
@@ -230,6 +234,184 @@ export async function sendMessageToConversation(
   }
 
   const contact = conversation.contact;
+  const channelPlatform = conversation.channel || 'whatsapp';
+
+  // -------------------------------------------------------------
+  // Omnichannel Branch A: Instagram Direct Messages
+  // -------------------------------------------------------------
+  if (channelPlatform === 'instagram') {
+    let chQuery = db
+      .from('channels')
+      .select('*')
+      .eq('account_id', accountId)
+      .eq('platform', 'instagram');
+
+    if (conversation.channel_id) {
+      chQuery = chQuery.eq('id', conversation.channel_id);
+    }
+
+    const { data: channel, error: chErr } = await chQuery.maybeSingle();
+    if (chErr || !channel || !channel.access_token) {
+      throw new SendMessageError(
+        'instagram_not_configured',
+        'Instagram account is not connected. Please connect your Instagram Business account in Settings.',
+        400
+      );
+    }
+
+    const token = decrypt(channel.access_token);
+    const recipientId = conversation.external_user_id || contact?.ig_id || contact?.ig_username;
+
+    if (!recipientId) {
+      throw new SendMessageError(
+        'bad_request',
+        'Recipient Instagram ID not found for this conversation',
+        400
+      );
+    }
+
+    let metaMsgId = '';
+    try {
+      const igRes = await sendInstagramDM(
+        channel.external_id,
+        recipientId,
+        {
+          text: contentText || '',
+          media_url: mediaUrl || undefined,
+        },
+        token
+      );
+      metaMsgId = igRes.message_id;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new SendMessageError('meta_error', `Instagram send failed: ${msg}`, 502);
+    }
+
+    const { data: msgRecord, error: msgError } = await db
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_type: 'agent',
+        content_type: messageType,
+        content_text: contentText || null,
+        media_url: mediaUrl || null,
+        message_id: metaMsgId,
+        meta_message_id: metaMsgId,
+        channel: 'instagram',
+        direction: 'outbound',
+        status: 'sent',
+      })
+      .select()
+      .single();
+
+    if (msgError) {
+      console.error('[send-message] IG message insert error:', msgError);
+    }
+
+    await db
+      .from('conversations')
+      .update({
+        last_message_text: contentText || `[${messageType}]`,
+        last_message_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', conversationId);
+
+    return {
+      messageId: msgRecord?.id || `ig-${Date.now()}`,
+      whatsappMessageId: metaMsgId,
+    };
+  }
+
+  // -------------------------------------------------------------
+  // Omnichannel Branch B: Facebook Messenger Messages
+  // -------------------------------------------------------------
+  if (channelPlatform === 'facebook') {
+    let chQuery = db
+      .from('channels')
+      .select('*')
+      .eq('account_id', accountId)
+      .eq('platform', 'facebook');
+
+    if (conversation.channel_id) {
+      chQuery = chQuery.eq('id', conversation.channel_id);
+    }
+
+    const { data: channel, error: chErr } = await chQuery.maybeSingle();
+    if (chErr || !channel || !channel.access_token) {
+      throw new SendMessageError(
+        'facebook_not_configured',
+        'Facebook Page is not connected. Please connect your Facebook Page in Settings.',
+        400
+      );
+    }
+
+    const token = decrypt(channel.access_token);
+    const recipientId = conversation.external_user_id || contact?.fb_psid;
+
+    if (!recipientId) {
+      throw new SendMessageError(
+        'bad_request',
+        'Recipient Facebook PSID not found for this conversation',
+        400
+      );
+    }
+
+    let metaMsgId = '';
+    try {
+      const fbRes = await sendFacebookMessage(
+        channel.external_id,
+        recipientId,
+        {
+          text: contentText || '',
+        },
+        token
+      );
+      metaMsgId = fbRes.message_id;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new SendMessageError('meta_error', `Facebook send failed: ${msg}`, 502);
+    }
+
+    const { data: msgRecord, error: msgError } = await db
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_type: 'agent',
+        content_type: messageType,
+        content_text: contentText || null,
+        media_url: mediaUrl || null,
+        message_id: metaMsgId,
+        meta_message_id: metaMsgId,
+        channel: 'facebook',
+        direction: 'outbound',
+        status: 'sent',
+      })
+      .select()
+      .single();
+
+    if (msgError) {
+      console.error('[send-message] FB message insert error:', msgError);
+    }
+
+    await db
+      .from('conversations')
+      .update({
+        last_message_text: contentText || `[${messageType}]`,
+        last_message_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', conversationId);
+
+    return {
+      messageId: msgRecord?.id || `fb-${Date.now()}`,
+      whatsappMessageId: metaMsgId,
+    };
+  }
+
+  // -------------------------------------------------------------
+  // Omnichannel Branch C: WhatsApp Cloud API Messages
+  // -------------------------------------------------------------
   if (!contact?.phone) {
     throw new SendMessageError(
       'bad_request',

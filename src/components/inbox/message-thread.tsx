@@ -28,6 +28,7 @@ import {
   PanelRightOpen,
   PanelRightClose,
 } from "lucide-react";
+import { InstagramIcon as Instagram, FacebookIcon as Facebook } from "@/components/icons/social-icons";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -885,7 +886,33 @@ export function MessageThread({
     );
   }
 
-  const displayName = contact.name || contact.phone;
+  const channel = conversation.channel || "whatsapp";
+  const displayName =
+    contact.name ||
+    (channel === "instagram"
+      ? contact.ig_username
+        ? `@${contact.ig_username}`
+        : conversation.external_user_id
+        ? `Instagram User (${conversation.external_user_id.slice(-4)})`
+        : "Instagram User"
+      : null) ||
+    (channel === "facebook"
+      ? conversation.external_user_id
+        ? `Facebook User (${conversation.external_user_id.slice(-4)})`
+        : "Facebook User"
+      : null) ||
+    contact.phone ||
+    "Customer";
+
+  const subtitle =
+    channel === "instagram"
+      ? contact.ig_username
+        ? `@${contact.ig_username}`
+        : "Instagram Direct"
+      : channel === "facebook"
+      ? "Facebook Messenger"
+      : contact.phone;
+
   const messageGroups = groupMessagesByDate(messages);
   const currentStatus = STATUS_OPTIONS.find(
     (s) => s.value === conversation.status
@@ -922,12 +949,50 @@ export function MessageThread({
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
-            {displayName.charAt(0).toUpperCase()}
+          <div className="relative shrink-0">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground overflow-hidden">
+              {contact.avatar_url ? (
+                <img
+                  src={contact.avatar_url}
+                  alt={displayName}
+                  className="h-9 w-9 rounded-full object-cover"
+                />
+              ) : (
+                displayName.replace(/^@/, "").charAt(0).toUpperCase()
+              )}
+            </div>
+            {/* Channel Icon Badge */}
+            <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-card shadow-xs">
+              {channel === "instagram" ? (
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-linear-to-tr from-amber-500 via-pink-500 to-purple-600 text-white">
+                  <Instagram className="h-2 w-2" />
+                </div>
+              ) : channel === "facebook" ? (
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-blue-600 text-white">
+                  <Facebook className="h-2 w-2" />
+                </div>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-emerald-600 text-white">
+                  <MessageSquare className="h-2 w-2" />
+                </div>
+              )}
+            </div>
           </div>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
-            <p className="truncate text-xs text-muted-foreground">{contact.phone}</p>
+            <div className="flex items-center gap-1.5">
+              <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
+              {channel === "instagram" && (
+                <span className="inline-flex items-center rounded-sm bg-pink-500/10 px-1.5 py-0.5 text-[10px] font-medium text-pink-500">
+                  Instagram
+                </span>
+              )}
+              {channel === "facebook" && (
+                <span className="inline-flex items-center rounded-sm bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-medium text-blue-500">
+                  Messenger
+                </span>
+              )}
+            </div>
+            <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
           </div>
           {/* Session timer badge — hidden on the narrowest phones so
               the name + back arrow keep their room. */}

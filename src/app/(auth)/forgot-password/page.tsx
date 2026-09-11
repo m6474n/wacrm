@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MessageSquare, CheckCircle, ArrowLeft } from "lucide-react";
+import { AppLogo } from "@/components/brand/app-logo";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -27,18 +28,27 @@ export default function ForgotPasswordPage() {
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-    });
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      setSuccess(true);
       setLoading(false);
-      return;
+    } catch (err: any) {
+      setError(
+        err?.message === "Failed to fetch"
+          ? "Unable to connect to authentication server. Please verify your Supabase project status in .env.local."
+          : err?.message || "Failed to send reset link"
+      );
+      setLoading(false);
     }
-
-    setSuccess(true);
-    setLoading(false);
   };
 
   if (success) {
@@ -75,14 +85,17 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md border-border bg-card">
+      <Card className="w-full max-w-md border border-border bg-card shadow-sm">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <MessageSquare className="h-6 w-6 text-primary" />
+          <div className="mb-2">
+            <AppLogo size="xl" priority />
           </div>
-          <CardTitle className="text-xl text-foreground">Reset password</CardTitle>
+          <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+            Deversol Security & Access
+          </div>
+          <CardTitle className="font-heading text-2xl font-bold tracking-tight text-foreground">Reset password</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Enter your email and we&apos;ll send you a reset link
+            Enter your email and we&apos;ll send you a recovery link
           </CardDescription>
         </CardHeader>
         <CardContent>
