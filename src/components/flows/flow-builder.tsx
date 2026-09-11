@@ -155,7 +155,7 @@ export function FlowBuilder() {
   }, [flashKey]);
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-7">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 sm:px-6 py-7">
       <TriggerPanel
         state={state}
         setState={setState}

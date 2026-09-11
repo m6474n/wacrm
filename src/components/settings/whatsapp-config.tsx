@@ -31,6 +31,13 @@ import {
 } from '@/components/ui/accordion';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
 
+declare global {
+  interface Window {
+    FB: any;
+    fbAsyncInit: () => void;
+  }
+}
+
 const MASKED_TOKEN = '••••••••••••••••';
 
 type ConnectionStatus = 'connected' | 'disconnected' | 'unknown';
@@ -166,6 +173,28 @@ export function WhatsAppConfig() {
   }, [supabase]);
 
   useEffect(() => {
+    // Dynamically load the Facebook SDK script for Embedded Signup
+    if (typeof window !== 'undefined' && !document.getElementById('facebook-jssdk')) {
+      const fbAppId = process.env.NEXT_PUBLIC_META_APP_ID;
+      if (fbAppId) {
+        window.fbAsyncInit = function() {
+          window.FB.init({
+            appId: fbAppId,
+            cookie: true,
+            xfbml: true,
+            version: 'v21.0'
+          });
+        };
+
+        const js = document.createElement('script');
+        js.id = 'facebook-jssdk';
+        js.src = 'https://connect.facebook.net/en_US/sdk.js';
+        js.async = true;
+        js.defer = true;
+        document.head.appendChild(js);
+      }
+    }
+
     // Need both the auth session (`!authLoading`) AND the profile
     // (`!profileLoading`, which carries `accountId`). Without the
     // second guard, the effect would fire with `accountId === null`
@@ -433,17 +462,69 @@ export function WhatsAppConfig() {
 
         {/* Connection Status */}
         <Alert className="bg-card border-border">
-          <div className="flex items-center gap-2">
-            {connectionStatus === 'connected' ? (
-              <CheckCircle2 className="size-4 text-primary" />
-            ) : (
-              <XCircle className="size-4 text-red-500" />
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              {connectionStatus === 'connected' ? (
+                <CheckCircle2 className="size-4 text-primary" />
+              ) : (
+                <XCircle className="size-4 text-red-500" />
+              )}
+              <AlertTitle className="text-foreground mb-0">
+                {connectionStatus === 'connected' ? t('credentialsValid') : t('notConnected')}
+              </AlertTitle>
+            </div>
+            {connectionStatus !== 'connected' && (
+              <Button
+                onClick={() => {
+                  if (typeof window === 'undefined' || !window.FB) {
+                    toast.error('Facebook SDK not loaded yet. Please wait or check your Meta App ID.');
+                    return;
+                  }
+                  window.FB.login(
+                    (response: any) => {
+                      if (response.authResponse?.accessToken) {
+                        const userToken = response.authResponse.accessToken;
+                        toast.promise(
+                          fetch('/api/whatsapp/embedded-signup', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ accessToken: userToken }),
+                          }).then(async (res) => {
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error || 'Setup failed');
+                            return data;
+                          }),
+                          {
+                            loading: 'Linking your WhatsApp Business Account...',
+                            success: (data) => {
+                              if (accountId) fetchConfig(accountId);
+                              return `Connected to ${data.phoneInfo?.display_phone_number || 'WhatsApp'}!`;
+                            },
+                            error: (err) => err.message || 'Verification failed',
+                          }
+                        );
+                      } else {
+                        toast.error('Facebook login cancelled or failed.');
+                      }
+                    },
+                    {
+                      scope: 'whatsapp_business_management,whatsapp_business_messaging',
+                      extras: {
+                        feature: 'whatsapp_embedded_signup',
+                      },
+                    }
+                  );
+                }}
+                className="bg-[#1877F2] hover:bg-[#166FE5] text-white flex items-center gap-2"
+              >
+                <svg className="size-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                Connect with Facebook
+              </Button>
             )}
-            <AlertTitle className="text-foreground mb-0">
-              {connectionStatus === 'connected' ? t('credentialsValid') : t('notConnected')}
-            </AlertTitle>
           </div>
-          <AlertDescription className="text-muted-foreground">
+          <AlertDescription className="text-muted-foreground mt-2">
             {connectionStatus === 'connected'
               ? t('connectedDesc')
               : statusMessage ||

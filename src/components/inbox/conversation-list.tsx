@@ -8,8 +8,9 @@ import {
   normalizeConversations,
 } from "@/lib/inbox/conversations";
 import { cn } from "@/lib/utils";
-import type { Conversation, ConversationStatus, Tag } from "@/types";
-import { Search, ChevronDown, X } from "lucide-react";
+import type { Conversation, ConversationStatus, Tag, OmnichannelPlatform } from "@/types";
+import { Search, ChevronDown, X, MessageSquare } from "lucide-react";
+import { InstagramIcon as Instagram, FacebookIcon as Facebook } from "@/components/icons/social-icons";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
@@ -42,9 +43,8 @@ const STATUS_COLORS: Record<ConversationStatus, string> = {
   closed: "bg-muted-foreground",
 };
 
-
-
 type InboxFilter = ConversationStatus | "all" | "unread";
+type ChannelFilter = "all" | OmnichannelPlatform;
 
 export function ConversationList({
   activeConversationId,
@@ -65,6 +65,7 @@ export function ConversationList({
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
+  const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
   const [loading, setLoading] = useState(true);
   // Contact-based filters (issue #272). Tags use OR logic (a conversation
   // matches if its contact carries any selected tag), consistent with
@@ -158,8 +159,22 @@ export function ConversationList({
     return m;
   }, [tags]);
 
+  // Channel conversation counts
+  const channelCounts = useMemo(() => {
+    const counts = { all: conversations.length, whatsapp: 0, instagram: 0, facebook: 0 };
+    for (const c of conversations) {
+      const ch = c.channel || "whatsapp";
+      if (ch in counts) counts[ch as keyof typeof counts]++;
+    }
+    return counts;
+  }, [conversations]);
+
   const filtered = useMemo(() => {
     let result = conversations;
+
+    if (channelFilter !== "all") {
+      result = result.filter((c) => (c.channel || "whatsapp") === channelFilter);
+    }
 
     if (filter === "unread") {
       result = result.filter((c) => c.unread_count > 0);
@@ -182,13 +197,14 @@ export function ConversationList({
       result = result.filter((c) => {
         const name = c.contact?.name?.toLowerCase() ?? "";
         const phone = c.contact?.phone?.toLowerCase() ?? "";
+        const igUser = c.contact?.ig_username?.toLowerCase() ?? "";
         const lastMsg = c.last_message_text?.toLowerCase() ?? "";
-        return name.includes(q) || phone.includes(q) || lastMsg.includes(q);
+        return name.includes(q) || phone.includes(q) || igUser.includes(q) || lastMsg.includes(q);
       });
     }
 
     return result;
-  }, [conversations, filter, search, selectedTagIds, selectedCompany]);
+  }, [conversations, channelFilter, filter, search, selectedTagIds, selectedCompany]);
 
   const toggleTag = useCallback((id: string) => {
     setSelectedTagIds((prev) =>
@@ -224,8 +240,8 @@ export function ConversationList({
     // the single pane showing; fixed 320px on desktop where it shares the
     // row with the thread + contact sidebar.
     <div className="flex h-full w-full flex-col border-r border-border bg-card lg:w-80">
-      {/* Search + Filter */}
-      <div className="space-y-2 border-b border-border p-3">
+      {/* Search + Channel Tabs + Filter */}
+      <div className="space-y-2.5 border-b border-border p-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -234,6 +250,72 @@ export function ConversationList({
             placeholder={t("searchPlaceholder")}
             className="border-border bg-muted pl-9 text-sm text-foreground placeholder-muted-foreground focus:border-primary/50"
           />
+        </div>
+
+        {/* Omnichannel Filter Pills */}
+        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar">
+          <button
+            onClick={() => setChannelFilter("all")}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+              channelFilter === "all"
+                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+            )}
+          >
+            All
+            <span className={cn(
+              "ml-0.5 text-[10px]",
+              channelFilter === "all" ? "text-primary-foreground/80" : "text-muted-foreground"
+            )}>
+              {channelCounts.all}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setChannelFilter("whatsapp")}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+              channelFilter === "whatsapp"
+                ? "bg-emerald-600 text-white font-semibold shadow-xs"
+                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+            )}
+            title="WhatsApp"
+          >
+            <MessageSquare className="h-3 w-3 text-emerald-400" />
+            <span>WA</span>
+            <span className="text-[10px] opacity-80">{channelCounts.whatsapp}</span>
+          </button>
+
+          <button
+            onClick={() => setChannelFilter("instagram")}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+              channelFilter === "instagram"
+                ? "bg-linear-to-r from-purple-600 to-pink-600 text-white font-semibold shadow-xs"
+                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+            )}
+            title="Instagram Direct"
+          >
+            <Instagram className="h-3 w-3 text-pink-400" />
+            <span>IG</span>
+            <span className="text-[10px] opacity-80">{channelCounts.instagram}</span>
+          </button>
+
+          <button
+            onClick={() => setChannelFilter("facebook")}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+              channelFilter === "facebook"
+                ? "bg-blue-600 text-white font-semibold shadow-xs"
+                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+            )}
+            title="Facebook Messenger"
+          >
+            <Facebook className="h-3 w-3 text-blue-400" />
+            <span>FB</span>
+            <span className="text-[10px] opacity-80">{channelCounts.facebook}</span>
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-1">
@@ -437,8 +519,26 @@ function ConversationItem({
   t,
 }: ConversationItemProps) {
   const contact = conversation.contact;
-  const displayName = contact?.name || contact?.phone || t("unknown");
-  const initials = displayName.charAt(0).toUpperCase();
+  const channel = conversation.channel || "whatsapp";
+
+  const displayName =
+    contact?.name ||
+    (channel === "instagram"
+      ? contact?.ig_username
+        ? `@${contact.ig_username}`
+        : conversation.external_user_id
+        ? `Instagram User (${conversation.external_user_id.slice(-4)})`
+        : "Instagram User"
+      : null) ||
+    (channel === "facebook"
+      ? conversation.external_user_id
+        ? `Facebook User (${conversation.external_user_id.slice(-4)})`
+        : "Facebook User"
+      : null) ||
+    contact?.phone ||
+    t("unknown");
+
+  const initials = displayName.replace(/^@/, "").charAt(0).toUpperCase();
 
   const handleClick = useCallback(() => {
     onSelect(conversation);
@@ -458,17 +558,35 @@ function ConversationItem({
         isActive && "border-l-2 border-primary bg-muted/70"
       )}
     >
-      {/* Avatar */}
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
-        {contact?.avatar_url ? (
-          <img
-            src={contact.avatar_url}
-            alt={displayName}
-            className="h-10 w-10 rounded-full object-cover"
-          />
-        ) : (
-          initials
-        )}
+      {/* Avatar with Channel Badge */}
+      <div className="relative shrink-0">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground overflow-hidden">
+          {contact?.avatar_url ? (
+            <img
+              src={contact.avatar_url}
+              alt={displayName}
+              className="h-10 w-10 rounded-full object-cover"
+            />
+          ) : (
+            initials
+          )}
+        </div>
+        {/* Channel Icon Badge */}
+        <div className="absolute -bottom-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full border-2 border-card shadow-xs">
+          {channel === "instagram" ? (
+            <div className="flex h-full w-full items-center justify-center rounded-full bg-linear-to-tr from-amber-500 via-pink-500 to-purple-600 text-white">
+              <Instagram className="h-2.5 w-2.5" />
+            </div>
+          ) : channel === "facebook" ? (
+            <div className="flex h-full w-full items-center justify-center rounded-full bg-blue-600 text-white">
+              <Facebook className="h-2.5 w-2.5" />
+            </div>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center rounded-full bg-emerald-600 text-white">
+              <MessageSquare className="h-2.5 w-2.5" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content */}

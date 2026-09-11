@@ -14,16 +14,16 @@
  */
 
 export const THEME_IDS = [
-  "violet",
-  "emerald",
+  "deversol",
   "cobalt",
+  "emerald",
   "amber",
-  "rose",
+  "slate",
 ] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
-export const DEFAULT_THEME: ThemeId = "violet";
+export const DEFAULT_THEME: ThemeId = "deversol";
 
 export const STORAGE_KEY = "wacrm.theme";
 
@@ -37,7 +37,7 @@ export const STORAGE_KEY = "wacrm.theme";
  * opt-in eye-strain-friendly alternative.
  *
  * Persisted under its own localStorage key so it composes freely
- * with the accent choice (you can run Violet-light or Violet-dark).
+ * with the accent choice (you can run Deversol-light or Deversol-dark).
  */
 export const MODES = ["light", "dark"] as const;
 
@@ -68,34 +68,34 @@ export interface ThemeMeta {
 
 export const THEMES: ReadonlyArray<ThemeMeta> = [
   {
-    id: "violet",
-    name: "Violet",
-    tagline: "The default — confident, slightly playful.",
-    swatch: "oklch(0.526 0.247 293)",
-  },
-  {
-    id: "emerald",
-    name: "Emerald",
-    tagline: "Growth-coded, nods at messaging without copying WhatsApp green.",
-    swatch: "oklch(0.62 0.16 162)",
+    id: "deversol",
+    name: "Deversol Navy",
+    tagline: "The brand standard — authoritative, high-contrast B2B systems.",
+    swatch: "oklch(0.24 0.05 240)",
   },
   {
     id: "cobalt",
-    name: "Cobalt",
-    tagline: "Clean B2B-SaaS blue — calm and product-y.",
-    swatch: "oklch(0.585 0.2 254)",
+    name: "Deep Cobalt",
+    tagline: "Precision engineering blue — calm and analytical.",
+    swatch: "oklch(0.48 0.16 250)",
+  },
+  {
+    id: "emerald",
+    name: "Systems Green",
+    tagline: "Growth-coded — revenue operations and conversion pipeline.",
+    swatch: "oklch(0.55 0.15 155)",
   },
   {
     id: "amber",
-    name: "Amber",
-    tagline: "Warm and friendly — feels good for SMB teams.",
-    swatch: "oklch(0.745 0.16 65)",
+    name: "Audit Amber",
+    tagline: "High-visibility diagnostic accent — alert & revenue audit.",
+    swatch: "oklch(0.72 0.15 70)",
   },
   {
-    id: "rose",
-    name: "Rose",
-    tagline: "Bold and modern — D2C, creator-economy, lifestyle.",
-    swatch: "oklch(0.645 0.22 16)",
+    id: "slate",
+    name: "Architectural Slate",
+    tagline: "Minimalist, restrained, editorial monochromatic.",
+    swatch: "oklch(0.48 0.03 240)",
   },
 ];
 

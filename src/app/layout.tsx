@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
-import { Inter } from "next/font/google";
+import { DM_Sans, Open_Sans, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/hooks/use-theme";
@@ -15,23 +15,44 @@ import {
   THEME_IDS,
 } from "@/lib/themes";
 
-const inter = Inter({
-  variable: "--font-sans",
+const dmSans = DM_Sans({
   subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["100", "200", "300", "400", "500", "600", "700"],
+  display: "swap",
+});
+
+const openSans = Open_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["300", "400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: "Deversol — Revenue Systems & CRM",
+    template: "%s — Deversol",
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description: "Deversol Revenue Operations & WhatsApp CRM Infrastructure.",
   robots: {
     index: false,
     follow: false,
   },
   icons: {
-    icon: [{ url: "/icon" }],
+    icon: [
+      { url: "/ds_app_icon.png", sizes: "any", type: "image/png" },
+      { url: "/icon.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/ds_app_icon.png",
+    shortcut: "/ds_app_icon.png",
   },
   formatDetection: {
     email: false,
@@ -41,7 +62,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
+  themeColor: "#112A46",
   colorScheme: "dark light",
 };
 
@@ -90,14 +111,7 @@ export default async function RootLayout({
       lang={locale}
       data-theme={DEFAULT_THEME}
       data-mode={DEFAULT_MODE}
-      className={`${inter.variable} h-full antialiased`}
-      // The `theme-boot` script below rewrites `data-theme` and
-      // `data-mode` on <html> from localStorage before React hydrates,
-      // so for any non-default choice the client DOM intentionally
-      // differs from the server-rendered defaults. suppressHydration-
-      // Warning silences the expected mismatch — it only applies to
-      // this element's own attributes, so genuine mismatches in
-      // children still surface.
+      className={`${dmSans.variable} ${openSans.variable} ${jetbrainsMono.variable} h-full antialiased font-sans`}
       suppressHydrationWarning
     >
       <head>
@@ -107,7 +121,10 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }}
         />
       </head>
-      <body className="min-h-full bg-background text-foreground font-sans">
+      <body
+        className="min-h-full bg-background text-foreground font-sans"
+        suppressHydrationWarning
+      >
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider>
             {children}
@@ -118,3 +135,4 @@ export default async function RootLayout({
     </html>
   );
 }
+

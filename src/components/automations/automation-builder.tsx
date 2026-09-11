@@ -33,6 +33,7 @@ import {
   ArrowUp,
   MousePointerClick,
   List,
+  Sparkles,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -84,6 +85,8 @@ export interface BuilderInitial {
   trigger_config: Record<string, unknown>
   is_active: boolean
   steps: BuilderStep[]
+  template_slug?: string
+  template_name?: string
 }
 
 // ------------------------------------------------------------
@@ -748,9 +751,20 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
       </header>
 
       {/* Canvas */}
-      <div className="relative flex-1 overflow-y-auto">
+      <div className="relative flex-1 overflow-x-auto overflow-y-auto">
         <div className="absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
-        <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10">
+        <div className="relative mx-auto flex w-full max-w-4xl lg:max-w-5xl flex-col items-center gap-0 px-4 py-10 transition-all duration-300">
+          {state.template_name && (
+            <div className="mb-6 w-full max-w-2xl rounded-xl border border-primary/30 bg-primary/5 p-4 text-xs text-foreground shadow-sm animate-in fade-in duration-300">
+              <div className="flex items-center gap-2 font-semibold text-primary">
+                <Sparkles className="h-4 w-4 text-amber-400 flex-shrink-0" />
+                <span>Prebuilt Template: {state.template_name}</span>
+              </div>
+              <p className="mt-1 text-muted-foreground leading-relaxed">
+                All buttons, list items, menus, and triggers have been populated. You can edit any message, customize links, or reassign agents to match your company before saving or activating.
+              </p>
+            </div>
+          )}
           <ResourcesProvider>
             <TriggerCard
               type={state.trigger_type}
@@ -795,9 +809,7 @@ function TriggerCard({
 }) {
   const [open, setOpen] = useState(false)
   return (
-    // Card width: full on mobile, fixed 320px on sm+. The canvas wrapper
-    // (max-w-2xl + px-4) keeps this tidy on tablet/desktop.
-    <div className="z-10 w-full max-w-[320px] sm:w-80">
+    <div className={cn("z-10 w-full transition-all duration-200", open ? "max-w-xl sm:max-w-[560px]" : "max-w-md sm:max-w-[440px]")}>
       <div className="rounded-lg border border-border border-l-4 border-l-blue-500 bg-card shadow-lg">
         <button
           type="button"
@@ -1057,7 +1069,7 @@ function StepList(props: StepListProps) {
         })()
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex w-full flex-col items-center">
       <AddButton onPick={(t) => props.addStepAt(parentScope, 0, t)} />
       {steps.map((step, idx) => (
         <StepRenderer
@@ -1099,20 +1111,36 @@ function StepRenderer({
   const Icon = meta.icon
   const expanded = props.expandedId === step.cid
   const isCondition = step.step_type === "condition"
-  // Card widths on mobile fill the full canvas column (max-w-2xl px-4
-  // still keeps them reasonable). On sm+ the original fixed widths
-  // come back so the flow visual stays recognisable.
-  const width = isCondition
-    ? "w-full max-w-[400px] sm:w-[400px]"
-    : "w-full max-w-[320px] sm:w-80"
+  const isInteractive = step.step_type === "send_buttons" || step.step_type === "send_list"
+  const isInsideBranch = parentScope.kind === "branch"
+
+  // Compute adaptive widths based on context (root vs branch) and expanded state
+  const width = isInsideBranch
+    ? isInteractive && expanded
+      ? "w-full max-w-md sm:max-w-[440px]"
+      : expanded
+        ? "w-full max-w-sm sm:max-w-[360px]"
+        : "w-full max-w-[300px] sm:max-w-[320px]"
+    : isCondition
+      ? "w-full max-w-3xl lg:max-w-4xl"
+      : isInteractive && expanded
+        ? "w-full max-w-2xl lg:max-w-3xl"
+        : expanded
+          ? "w-full max-w-xl sm:max-w-[560px]"
+          : "w-full max-w-md sm:max-w-[440px]"
 
   return (
     <>
-      <div className={cn("z-10 flex flex-col", width)}>
+      <div className={cn("z-10 flex flex-col items-center transition-all duration-200", width)}>
         <div
           className={cn(
-            "rounded-lg border border-border border-l-4 bg-card shadow-lg",
+            "rounded-lg border border-border border-l-4 bg-card shadow-lg transition-all duration-200",
             meta.border,
+            isCondition
+              ? expanded
+                ? "w-full max-w-xl sm:max-w-[560px]"
+                : "w-full max-w-md sm:max-w-[440px]"
+              : "w-full"
           )}
         >
           <button
@@ -1215,14 +1243,11 @@ function ConditionBranches({
     { kind: "branch", parentCid: step.cid, branch: "no", index: 0 },
   ]
   return (
-    // Stack Yes/No vertically on mobile — two columns at 375px would
-    // cram each branch to ~170px which is too narrow for the nested
-    // cards. Two-column grid returns on sm+.
-    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <BranchColumn label={t("branches.yes")} color="text-primary">
+    <div className="mt-4 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
+      <BranchColumn label={t("branches.yes")} color="text-emerald-400" borderColor="border-emerald-500/30">
         <StepList {...props} steps={yes} parentPath={yesPath} />
       </BranchColumn>
-      <BranchColumn label={t("branches.no")} color="text-rose-400">
+      <BranchColumn label={t("branches.no")} color="text-rose-400" borderColor="border-rose-500/30">
         <StepList {...props} steps={no} parentPath={noPath} />
       </BranchColumn>
     </div>
@@ -1232,16 +1257,33 @@ function ConditionBranches({
 function BranchColumn({
   label,
   color,
+  borderColor,
   children,
 }: {
   label: string
   color: string
+  borderColor?: string
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center">
-      <div className={cn("mb-2 text-[11px] font-semibold uppercase", color)}>{label}</div>
-      {children}
+    <div
+      className={cn(
+        "flex flex-col items-center rounded-xl border border-dashed p-3 sm:p-4 min-w-0 bg-muted/10 w-full",
+        borderColor || "border-border/60"
+      )}
+    >
+      <div
+        className={cn(
+          "mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-background border shadow-xs",
+          color
+        )}
+      >
+        <GitBranch className="h-3.5 w-3.5" />
+        {label}
+      </div>
+      <div className="w-full flex flex-col items-center">
+        {children}
+      </div>
     </div>
   )
 }
